@@ -156,6 +156,10 @@ button{font-family:inherit;cursor:pointer;border:none}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .toast.err{background:#b4231f}
 .subnav{display:flex;gap:6px;margin:10px 0}
+.strap{max-width:760px;margin:14px auto 34px;padding:18px 16px 0;text-align:center;
+  color:var(--muted);font-weight:800;font-size:13.5px;border-top:1px solid var(--line)}
+.strap b{color:var(--ink)} .strap .emo{margin-left:5px;letter-spacing:1px}
+.strap small{display:block;margin-top:5px;font-weight:600;font-size:11.5px;opacity:.8}
 </style>
 </head>
 <body>
@@ -166,6 +170,8 @@ button{font-family:inherit;cursor:pointer;border:none}
 </div></div>
 
 <div class="wrap" id="app"></div>
+<footer class="strap">A <b>JJ</b> &amp; <b>Claude</b> Production <span class="emo">⚽🤖</span>
+  <small>Powered by bold predictions and zero accountability.</small></footer>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -307,7 +313,7 @@ function viewLogin(){
   let chosen=null;
   app().innerHTML=`<div class="gate">
     <div class="ball">⚽</div><h2>Predict & Win</h2>
-    <p>2026 World Cup • 4 mates + 1 robot</p>
+    <p>2026 World Cup • 6 mates + 2 robots</p>
     <div class="pick-name" id="names">${window.PLAYERS.map(p=>`<div class="pn" data-n="${p}">${p}</div>`).join('')}</div>
     <div class="pinrow"><input id="pin" inputmode="numeric" maxlength="6" placeholder="PIN"/>
       <button id="go">Enter</button></div>
