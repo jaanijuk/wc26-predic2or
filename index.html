@@ -140,6 +140,10 @@ button{font-family:inherit;cursor:pointer;border:none}
   padding:13px;border-radius:14px;border:2px solid var(--line);background:var(--card)}
 .pinrow button{background:var(--grass);color:#fff;border-radius:14px;padding:0 20px;font-weight:800;font-size:16px}
 .hint{font-size:12.5px;color:var(--muted);margin-top:12px}
+.rules-link{display:inline-flex;align-items:center;gap:7px;margin-top:18px;text-decoration:none;
+  background:var(--card);border:2px solid var(--line);border-radius:999px;padding:10px 18px;
+  font-weight:800;font-size:14px;color:var(--ink);box-shadow:var(--shadow);transition:transform .12s,border-color .12s}
+.rules-link:active{transform:scale(.97)} .rules-link:hover{border-color:var(--grass)}
 
 /* ---------- misc ---------- */
 .banner{background:#fff6d8;border:1px solid #f0dd9a;color:#7a5b06;border-radius:14px;
@@ -304,6 +308,7 @@ function viewLogin(){
     <div class="pinrow"><input id="pin" inputmode="numeric" maxlength="6" placeholder="PIN"/>
       <button id="go">Enter</button></div>
     <div class="hint">First time? Pick your name and choose a PIN — that locks it to you.${DEMO?'<br><b>Demo mode:</b> any PIN works, nothing is saved.':''}</div>
+    <div><a class="rules-link" href="./PREDIC2OR-26-rules.pdf" target="_blank" rel="noopener">📖 How to play</a></div>
   </div>`;
   document.querySelectorAll('.pn').forEach(el=>el.onclick=()=>{
     document.querySelectorAll('.pn').forEach(x=>x.classList.remove('sel')); el.classList.add('sel'); chosen=el.dataset.n;});
