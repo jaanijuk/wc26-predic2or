@@ -1,0 +1,20 @@
+name: Fetch World Cup results
+
+on:
+  schedule:
+    # Every 2 hours (UTC). GitHub cron is best-effort; manual run is always available.
+    - cron: "0 */2 * * *"
+  workflow_dispatch:   # lets you trigger it by hand from the Actions tab
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm init -y && npm install @supabase/supabase-js@2
+      - run: node scripts/fetch_results.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
