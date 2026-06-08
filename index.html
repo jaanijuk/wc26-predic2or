@@ -123,6 +123,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 .rank{font-family:"Anton";font-size:26px;width:42px;text-align:center;color:var(--muted)}
 .rank.g1{color:#d9a406}.rank.g2{color:#9aa7a0}.rank.g3{color:#c08457}
 .lbname{font-weight:900;font-size:18px} .lbsub{font-size:12px;color:var(--muted);font-weight:600}
+.aibadge{display:inline-flex;align-items:center;font-size:12px;margin-left:6px;padding:2px 7px;border-radius:999px;background:#eef1ff;border:1px solid #d7ddff;vertical-align:middle}
 .lbtot{margin-left:auto;text-align:right}
 .lbtot .p{font-family:"Anton";font-size:30px;color:var(--ink);line-height:.9}
 .lbtot .u{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.5px}
@@ -184,6 +185,7 @@ const ROUND_COLOR = {Group:'var(--r-group)','Round of 32':'var(--r-r32)','Round 
  'Quarter-final':'var(--r-qf)','Semi-final':'var(--r-sf)','Third-place playoff':'var(--r-3rd)','Final':'var(--r-final)'};
 const ROUND_ORDER = ['Group','Round of 32','Round of 16','Quarter-final','Semi-final','Third-place playoff','Final'];
 const FLAGS = window.FLAGS||{};
+const ROBOTS = new Set(['Claude','Mila']);   // AI players — get a 🤖 badge
 
 //=============================================================================
 //  SCORING (mirrors the SQL view exactly)
@@ -283,6 +285,7 @@ const api = {
 //=============================================================================
 const fmtMEL = new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
 const fmtUK  = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+const fmtBUD = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Budapest',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
 function dayKeyMEL(iso){ return new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',weekday:'long',day:'numeric',month:'long'}).format(new Date(iso)); }
 function toast(msg,err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(err?' err':'');
   clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',2600); }
@@ -291,7 +294,8 @@ function renderClock(){
   const now=new Date();
   document.getElementById('clock').innerHTML =
     `<div class="tz"><span>MEL</span>${new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',hour:'2-digit',minute:'2-digit',hour12:true}).format(now)}</div>`+
-    `<div class="tz"><span>UK</span>${new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit',hour12:true}).format(now)}</div>`;
+    `<div class="tz"><span>UK</span>${new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit',hour12:true}).format(now)}</div>`+
+    `<div class="tz"><span>BUD</span>${new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Budapest',hour:'2-digit',minute:'2-digit',hour12:true}).format(now)}</div>`;
 }
 
 //=============================================================================
@@ -387,7 +391,7 @@ function matchCard(m,i){
       <span>${flag(m.team_a)||''} ${m.venue||''}</span></div>
       <span class="status ${stCls}">${stTxt}</span></div>
     <div class="teams">${teamCell(m,'a')}<span class="vs">v</span>${teamCell(m,'b')}</div>
-    <div class="meta"><span>🇦🇺 ${fmtMEL.format(new Date(m.kickoff_utc))}</span><span>•</span><span>🇬🇧 ${fmtUK.format(new Date(m.kickoff_utc))}</span></div>
+    <div class="meta"><span>🇦🇺 ${fmtMEL.format(new Date(m.kickoff_utc))}</span><span>•</span><span>🇬🇧 ${fmtUK.format(new Date(m.kickoff_utc))}</span><span>•</span><span>🇭🇺 ${fmtBUD.format(new Date(m.kickoff_utc))}</span></div>
     ${body}</div>`;
 }
 function stp(side,sign){ return `<button data-side="${side}" data-d="${sign==='+'?1:-1}">${sign}</button>`; }
@@ -413,7 +417,7 @@ function viewLeaderboard(){
   S.lb.forEach((r,idx)=>{ const medal=idx<3?`g${idx+1}`:'';
     html+=`<div class="lbrow ${r.player===S.player?'me':''}" style="animation-delay:${idx*50}ms">
       <div class="rank ${medal}">${idx+1}</div>
-      <div><div class="lbname">${flag(r.player)||'🤖'} ${r.player}</div>
+      <div><div class="lbname">${r.player}${ROBOTS.has(r.player)?' <span class="aibadge" title="AI player">🤖</span>':''}</div>
         <div class="lbsub">${r.scoring_picks||0} scoring picks · ${r.exact_scores||0} exact</div></div>
       <div class="lbtot"><div class="p">${r.total||0}</div><div class="u">PTS</div></div></div>`;});
   html+=`</div>`; app().innerHTML=html; wireCommon();
