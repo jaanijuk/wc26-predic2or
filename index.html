@@ -252,7 +252,7 @@ let DEMOCACHE=null;
 // render correctly on Windows and all other platforms
 function parseEmoji(el){
   if(window.twemoji) twemoji.parse(el||document.body,
-    {folder:'svg',ext:'.svg',base:'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/',
+    {folder:'svg',ext:'.svg',base:'https://cdn.jsdelivr.net/gh/jdecked/twemoji@14.1.2/assets/',
      className:'twemoji'});
 }
 
@@ -329,6 +329,7 @@ function viewLogin(){
     <div class="hint">First time? Pick your name and choose a PIN — that locks it to you.${DEMO?'<br><b>Demo mode:</b> any PIN works, nothing is saved.':''}</div>
     <div><a class="rules-link" href="./PREDIC2OR-26-rules.pdf" target="_blank" rel="noopener">📖 How to play</a></div>
   </div>`;
+  parseEmoji();
   document.querySelectorAll('.pn').forEach(el=>el.onclick=()=>{
     document.querySelectorAll('.pn').forEach(x=>x.classList.remove('sel')); el.classList.add('sel'); chosen=el.dataset.n;});
   document.getElementById('go').onclick=async()=>{
@@ -422,7 +423,7 @@ function viewFixtures(){
     if(d!==cur){ html+=`<div class="dayhead">${d} <span style="opacity:.6">· MEL</span></div>`; cur=d; }
     html+=matchCard(m,i++); });
   if(!list.length) html+=`<div class="empty">No matches in this round yet.</div>`;
-  app().innerHTML=html; wireCommon(); wireFixtures(); parseEmoji(app());
+  app().innerHTML=html; wireCommon(); wireFixtures(); parseEmoji();
 }
 
 function viewLeaderboard(){
@@ -435,7 +436,7 @@ function viewLeaderboard(){
       <div><div class="lbname">${r.player}${ROBOTS.has(r.player)?' <span class="aibadge" title="AI player">🤖</span>':''}</div>
         <div class="lbsub">${r.scoring_picks||0} scoring picks · ${r.exact_scores||0} exact</div></div>
       <div class="lbtot"><div class="p">${r.total||0}</div><div class="u">PTS</div></div></div>`;});
-  html+=`</div>`; app().innerHTML=html; wireCommon(); parseEmoji(app());
+  html+=`</div>`; app().innerHTML=html; wireCommon(); parseEmoji();
 }
 
 function viewAdmin(){
@@ -454,7 +455,7 @@ function viewAdmin(){
         <button class="radv ${m.actual_advancer===m.team_a?'sel':''}" data-no="${m.no}" data-t="${m.team_a}">${m.team_a}</button>
         <button class="radv ${m.actual_advancer===m.team_b?'sel':''}" data-no="${m.no}" data-t="${m.team_b}">${m.team_b}</button></div>`:''}
       <button class="save" data-rsave="${m.no}">Save result</button></div>`;});
-  app().innerHTML=html; wireCommon(); wireAdmin(); parseEmoji(app());
+  app().innerHTML=html; wireCommon(); wireAdmin(); parseEmoji();
 }
 
 //=============================================================================
