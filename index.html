@@ -155,7 +155,7 @@ button{font-family:inherit;cursor:pointer;border:none}
   box-shadow:var(--shadow-lg);opacity:0;transition:.25s;z-index:99;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .toast.err{background:#b4231f}
-.subnav{display:flex;gap:6px;margin:10px 0}
+img.twemoji{height:1.2em;width:1.2em;vertical-align:-0.2em;display:inline-block}
 .strap{max-width:760px;margin:14px auto 34px;padding:18px 16px 0;text-align:center;
   color:var(--muted);font-weight:800;font-size:13.5px;border-top:1px solid var(--line)}
 .strap b{color:var(--ink)} .strap .emo{margin-left:5px;letter-spacing:1px}
@@ -175,6 +175,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script src="./assets/fixtures.js"></script>
 <script src="./config.js"></script>
 <script>
@@ -246,6 +247,14 @@ function demoSeed(){
   return {M,pub,my,lb};
 }
 let DEMOCACHE=null;
+
+// parse emoji in a container via Twemoji so subdivision flags (England, Scotland)
+// render correctly on Windows and all other platforms
+function parseEmoji(el){
+  if(window.twemoji) twemoji.parse(el||document.body,
+    {folder:'svg',ext:'.svg',base:'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/',
+     className:'twemoji'});
+}
 
 const api = {
   async login(name,pin){
@@ -413,7 +422,7 @@ function viewFixtures(){
     if(d!==cur){ html+=`<div class="dayhead">${d} <span style="opacity:.6">· MEL</span></div>`; cur=d; }
     html+=matchCard(m,i++); });
   if(!list.length) html+=`<div class="empty">No matches in this round yet.</div>`;
-  app().innerHTML=html; wireCommon(); wireFixtures();
+  app().innerHTML=html; wireCommon(); wireFixtures(); parseEmoji(app());
 }
 
 function viewLeaderboard(){
@@ -426,7 +435,7 @@ function viewLeaderboard(){
       <div><div class="lbname">${r.player}${ROBOTS.has(r.player)?' <span class="aibadge" title="AI player">🤖</span>':''}</div>
         <div class="lbsub">${r.scoring_picks||0} scoring picks · ${r.exact_scores||0} exact</div></div>
       <div class="lbtot"><div class="p">${r.total||0}</div><div class="u">PTS</div></div></div>`;});
-  html+=`</div>`; app().innerHTML=html; wireCommon();
+  html+=`</div>`; app().innerHTML=html; wireCommon(); parseEmoji(app());
 }
 
 function viewAdmin(){
@@ -445,7 +454,7 @@ function viewAdmin(){
         <button class="radv ${m.actual_advancer===m.team_a?'sel':''}" data-no="${m.no}" data-t="${m.team_a}">${m.team_a}</button>
         <button class="radv ${m.actual_advancer===m.team_b?'sel':''}" data-no="${m.no}" data-t="${m.team_b}">${m.team_b}</button></div>`:''}
       <button class="save" data-rsave="${m.no}">Save result</button></div>`;});
-  app().innerHTML=html; wireCommon(); wireAdmin();
+  app().innerHTML=html; wireCommon(); wireAdmin(); parseEmoji(app());
 }
 
 //=============================================================================
