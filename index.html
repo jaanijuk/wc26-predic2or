@@ -52,12 +52,19 @@ button{font-family:inherit;cursor:pointer;border:none}
   transition:transform .12s, color .12s, background .12s}
 .tab.active{background:var(--ink);color:#fff} .tab:active{transform:scale(.97)}
 
-/* ---------- round filter ---------- */
+/* ---------- filters (scope + round) ---------- */
 .filters{display:flex;gap:6px;overflow-x:auto;padding:8px 0 10px;-ms-overflow-style:none;scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
-.fchip{white-space:nowrap;background:var(--card);border:1px solid var(--line);border-radius:999px;
+.filters+.filters{padding-top:0;margin-top:-4px}
+.fchip,.schip{white-space:nowrap;background:var(--card);border:1px solid var(--line);border-radius:999px;
   padding:7px 13px;font-weight:700;font-size:13px;color:var(--ink);box-shadow:var(--shadow)}
 .fchip.active{background:var(--grass);color:#fff;border-color:var(--grass)}
+.schip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.schip .ct{display:inline-block;margin-left:6px;min-width:16px;text-align:center;line-height:16px;
+  background:var(--grass);color:#fff;border-radius:999px;padding:0 5px;font-size:11px;font-weight:900}
+.schip.active .ct{background:#fff;color:var(--ink)}
+.schip .ct.warn{background:var(--r-qf);color:#fff}
+.schip.active .ct.warn{background:#fff;color:var(--r-qf)}
 
 /* ---------- date heading ---------- */
 .dayhead{font-family:"Anton";font-size:15px;letter-spacing:.4px;color:var(--muted);
@@ -211,7 +218,7 @@ function scorePick(p,m){
 //  STATE + DATA LAYER
 //=============================================================================
 const S = { player:sessionStorage.getItem('wc_player')||null, pin:sessionStorage.getItem('wc_pin')||null,
-  isAdmin:false, tab:'fixtures', filter:'All', matches:[], my:{}, pub:{}, lb:[] };
+  isAdmin:false, tab:'fixtures', filter:'All', scope:'All', adminScope:'needs', matches:[], my:{}, pub:{}, lb:[] };
 
 function flag(name){ return FLAGS[name]||'⚽'; }
 function lockState(m){
@@ -302,6 +309,7 @@ const fmtMEL = new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',w
 const fmtUK  = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
 const fmtBUD = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Budapest',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
 function dayKeyMEL(iso){ return new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',weekday:'long',day:'numeric',month:'long'}).format(new Date(iso)); }
+function isTodayMEL(iso){ return dayKeyMEL(iso)===dayKeyMEL(new Date().toISOString()); }
 function toast(msg,err){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(err?' err':'');
   clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',2600); }
 
@@ -412,18 +420,49 @@ function matchCard(m,i){
 }
 function stp(side,sign){ return `<button data-side="${side}" data-d="${sign==='+'?1:-1}">${sign}</button>`; }
 
-function viewFixtures(){
-  const fset=['All','Group','Round of 32','Round of 16','Quarter-final','Semi-final','Final'];
+function viewFixtures(scroll){
+  const rounds=['All','Group','Round of 32','Round of 16','Quarter-final','Semi-final','Final'];
+  // outstanding picks across the WHOLE tournament (badge ignores the round filter)
+  const toPredict=S.matches.filter(m=>lockState(m)==='open' && !S.my[m.no]).length;
+  const scopes=[['To predict',toPredict],['Today',null],['Upcoming',null],['Results',null],['All',null]];
+
   let html=navHTML();
-  html+=`<div class="filters">${fset.map(f=>`<button class="fchip ${S.filter===f?'active':''}" data-f="${f}">${f==='All'?'All':f.replace('Round of ','R')}</button>`).join('')}</div>`;
-  let list=S.matches.slice().sort((a,b)=>new Date(a.kickoff_utc)-new Date(b.kickoff_utc));
+  html+=`<div class="filters">${scopes.map(([k,ct])=>{
+    const badge=(ct&&ct>0)?`<span class="ct">${ct}</span>`:'';
+    return `<button class="schip ${S.scope===k?'active':''}" data-s="${k}">${k}${badge}</button>`;}).join('')}</div>`;
+  html+=`<div class="filters">${rounds.map(f=>`<button class="fchip ${S.filter===f?'active':''}" data-f="${f}">${f==='All'?'All':f.replace('Round of ','R')}</button>`).join('')}</div>`;
+
+  let list=S.matches.slice();
+  if(S.scope==='To predict')   list=list.filter(m=>lockState(m)==='open' && !S.my[m.no]);
+  else if(S.scope==='Today')   list=list.filter(m=>isTodayMEL(m.kickoff_utc));
+  else if(S.scope==='Upcoming')list=list.filter(m=>lockState(m)!=='final');
+  else if(S.scope==='Results') list=list.filter(m=>lockState(m)==='final');
   if(S.filter!=='All') list=list.filter(m=>m.round===S.filter || (S.filter==='Final'&&m.round==='Third-place playoff'));
-  let cur=null,i=0;
+
+  const desc=(S.scope==='Results');   // latest results first
+  list.sort((a,b)=> desc ? new Date(b.kickoff_utc)-new Date(a.kickoff_utc) : new Date(a.kickoff_utc)-new Date(b.kickoff_utc));
+
+  // anchor the day of the first not-yet-finished match (only meaningful in the full 'All' view)
+  const firstOpen=(S.scope==='All') ? list.find(m=>lockState(m)!=='final') : null;
+  const anchorDay=firstOpen ? dayKeyMEL(firstOpen.kickoff_utc) : null;
+
+  let cur=null,i=0,anchored=false;
   list.forEach(m=>{ const d=dayKeyMEL(m.kickoff_utc);
-    if(d!==cur){ html+=`<div class="dayhead">${d} <span style="opacity:.6">· MEL</span></div>`; cur=d; }
+    if(d!==cur){ const isAnchor=(!anchored && d===anchorDay);
+      html+=`<div class="dayhead"${isAnchor?' id="jump-now"':''}>${d} <span style="opacity:.6">· MEL</span></div>`;
+      cur=d; if(isAnchor)anchored=true; }
     html+=matchCard(m,i++); });
-  if(!list.length) html+=`<div class="empty">No matches in this round yet.</div>`;
+  if(!list.length){ const msg={'To predict':'🎉 All caught up — every open match has your pick.',
+      'Today':'No matches today.','Upcoming':'Nothing upcoming.','Results':'No results in yet.'};
+    html+=`<div class="empty">${msg[S.scope]||'No matches in this round yet.'}</div>`; }
+
   app().innerHTML=html; wireCommon(); wireFixtures(); parseEmoji();
+
+  if(scroll && S.scope==='All'){ requestAnimationFrame(()=>{
+    const el=document.getElementById('jump-now');
+    const off=(document.querySelector('.topbar')?.offsetHeight||0)+8;
+    if(el) window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-off});
+    else if(list.length) window.scrollTo({top:document.body.scrollHeight}); }); }
 }
 
 function viewLeaderboard(){
@@ -440,14 +479,33 @@ function viewLeaderboard(){
 }
 
 function viewAdmin(){
-  let html=navHTML()+`<div class="banner">🛠️ Results entry & override. The auto-feed fills these in too — use this for penalty shootouts or to correct anything.</div>`;
-  S.matches.slice().sort((a,b)=>new Date(a.kickoff_utc)-new Date(b.kickoff_utc))
-    .filter(m=>m.team_a&&m.team_b).forEach(m=>{
+  const now=new Date();
+  const eligible=S.matches.filter(m=>m.team_a&&m.team_b);
+  const needs=eligible.filter(m=>m.status!=='final' && now>=new Date(m.kickoff_utc));
+  const scopes=[['needs','Needs result',needs.length,true],['today','Today',null,false],['all','All',null,false]];
+
+  let html=navHTML();
+  html+=`<div class="filters">${scopes.map(([k,l,ct,warn])=>{
+    const badge=(ct&&ct>0)?`<span class="ct${warn?' warn':''}">${ct}</span>`:'';
+    return `<button class="schip ascope ${S.adminScope===k?'active':''}" data-as="${k}">${l}${badge}</button>`;}).join('')}</div>`;
+  html+=`<div class="banner">🛠️ Results entry & override. The auto-feed fills these in too — use this for penalty shootouts or to correct anything.</div>`;
+
+  let list;
+  if(S.adminScope==='needs')      list=needs.slice().sort((a,b)=>new Date(b.kickoff_utc)-new Date(a.kickoff_utc));
+  else if(S.adminScope==='today') list=eligible.filter(m=>isTodayMEL(m.kickoff_utc)).sort((a,b)=>new Date(a.kickoff_utc)-new Date(b.kickoff_utc));
+  else                            list=eligible.slice().sort((a,b)=>new Date(a.kickoff_utc)-new Date(b.kickoff_utc));
+
+  if(!list.length){ const msg={needs:'✓ Nothing waiting — every kicked-off match has a result.',
+      today:'No matches scheduled today.',all:'No matches with teams yet.'};
+    html+=`<div class="empty">${msg[S.adminScope]}</div>`; }
+
+  list.forEach(m=>{
     html+=`<div class="card" style="--accent:${ROUND_COLOR[m.round]}">
       <div class="crow"><div class="meta"><span class="badge">#${m.no} ${m.label}</span></div>
         <span class="status ${m.status==='final'?'s-final':'s-open'}">${m.status==='final'?'FT '+m.actual_a+'–'+m.actual_b:'no result'}</span></div>
       <div class="teams"><div class="team"><span class="flag">${flag(m.team_a)}</span><span class="tname">${m.team_a}</span></div><span class="vs">v</span>
         <div class="team r"><span class="tname">${m.team_b}</span><span class="flag">${flag(m.team_b)}</span></div></div>
+      <div class="meta"><span>🇦🇺 ${fmtMEL.format(new Date(m.kickoff_utc))}</span></div>
       <div class="entry"><input class="ra" data-no="${m.no}" inputmode="numeric" style="font-family:Anton;font-size:24px;text-align:center;padding:8px;border-radius:10px;border:2px solid var(--line)" value="${m.actual_a??''}"/>
         <span class="colon">:</span>
         <input class="rb" data-no="${m.no}" inputmode="numeric" style="font-family:Anton;font-size:24px;text-align:center;padding:8px;border-radius:10px;border:2px solid var(--line)" value="${m.actual_b??''}"/></div>
@@ -467,7 +525,8 @@ function wireCommon(){
     sessionStorage.clear(); S.player=null;S.pin=null;S.my={};render();};
 }
 function wireFixtures(){
-  document.querySelectorAll('.fchip').forEach(c=>c.onclick=()=>{S.filter=c.dataset.f;viewFixtures();});
+  document.querySelectorAll('.schip').forEach(c=>c.onclick=()=>{S.scope=c.dataset.s;viewFixtures(false);});
+  document.querySelectorAll('.fchip').forEach(c=>c.onclick=()=>{S.filter=c.dataset.f;viewFixtures(false);});
   document.querySelectorAll('.entry .step button').forEach(b=>b.onclick=()=>{
     const no=b.closest('.entry').dataset.no, side=b.dataset.side, d=+b.dataset.d;
     const el=document.getElementById('n'+side+no); let v=Math.max(0,Math.min(20,(+el.textContent)+d));
@@ -480,10 +539,11 @@ function wireFixtures(){
       let adv=null; const sel=sv.parentElement.querySelector('.adv button.sel'); if(sel)adv=sel.dataset.adv;
       if(m.knockout&&!adv) return toast('Pick who advances',true);
       try{ await api.savePick(m.no,a,b,adv); toast('Prediction saved ✓');
-        await api.loadAll(); viewFixtures(); }
+        await api.loadAll(); viewFixtures(false); }
       catch(e){ toast(e.message||'Could not save',true); }};});
 }
 function wireAdmin(){
+  document.querySelectorAll('.ascope').forEach(c=>c.onclick=()=>{S.adminScope=c.dataset.as;viewAdmin();});
   document.querySelectorAll('.radv').forEach(b=>b.onclick=()=>{
     b.parentElement.querySelectorAll('.radv').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');});
   document.querySelectorAll('[data-rsave]').forEach(btn=>btn.onclick=async()=>{
@@ -502,7 +562,7 @@ function render(){
   if(!S.player){ viewLogin(); return; }
   if(S.tab==='leaderboard') viewLeaderboard();
   else if(S.tab==='admin'&&S.isAdmin) viewAdmin();
-  else viewFixtures();
+  else viewFixtures(true);
 }
 async function boot(){
   try{ await api.loadAll(); }catch(e){ toast('Load failed: '+(e.message||e),true); }
