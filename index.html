@@ -45,8 +45,13 @@ button{font-family:inherit;cursor:pointer;border:none}
 .chip{background:var(--ink);color:#fff;border-radius:999px;padding:6px 12px;font-weight:800;font-size:13px}
 .chip.out{background:transparent;color:var(--muted);border:1px solid var(--line)}
 
-/* ---------- tabs ---------- */
-.tabs{display:flex;gap:6px;margin:14px 0 6px}
+/* ---------- bottom nav ---------- */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:none;
+  background:rgba(253,250,242,.92);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+.bottomnav.show{display:block}
+.bn-inner{max-width:760px;margin:0 auto;display:flex;gap:6px;padding:8px 14px}
+body.nav-open{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
 .tab{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;
   padding:11px 8px;font-weight:800;font-size:14px;color:var(--muted);box-shadow:var(--shadow);
   transition:transform .12s, color .12s, background .12s}
@@ -179,6 +184,7 @@ img.twemoji{height:1.2em;width:1.2em;vertical-align:-0.2em;display:inline-block}
 <div class="wrap" id="app"></div>
 <footer class="strap">A <b>JJ</b> &amp; <b>Claude</b> Production <span class="emo">⚽🤖</span>
   <small>Powered by bold predictions and zero accountability.</small></footer>
+<nav class="bottomnav" id="bottomnav"></nav>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -352,12 +358,20 @@ function viewLogin(){
 }
 
 function navHTML(){
-  const tabs=[['fixtures','Fixtures'],['leaderboard','Leaderboard']];
-  if(S.isAdmin) tabs.push(['admin','Results']);
   return `<div class="who" style="justify-content:flex-end;margin-top:12px">
       <span class="chip">${flag(S.player)||''} ${S.player}${DEMO?' • demo':''}</span>
-      <span class="chip out" id="logout">Log out</span></div>
-    <div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${S.tab===k?'active':''}" data-t="${k}">${l}</button>`).join('')}</div>`;
+      <span class="chip out" id="logout">Log out</span></div>`;
+}
+function navTabsHTML(){
+  const tabs=[['fixtures','Fixtures'],['leaderboard','Leaderboard']];
+  if(S.isAdmin) tabs.push(['admin','Results']);
+  return `<div class="bn-inner">${tabs.map(([k,l])=>`<button class="tab ${S.tab===k?'active':''}" data-t="${k}">${l}</button>`).join('')}</div>`;
+}
+function renderNav(){
+  const el=document.getElementById('bottomnav'); if(!el) return;
+  if(!S.player){ el.innerHTML=''; el.classList.remove('show'); document.body.classList.remove('nav-open'); return; }
+  el.innerHTML=navTabsHTML(); el.classList.add('show'); document.body.classList.add('nav-open');
+  el.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ S.tab=t.dataset.t; window.scrollTo(0,0); render(); });
 }
 
 function teamCell(m,side){
@@ -520,7 +534,6 @@ function viewAdmin(){
 //  WIRING
 //=============================================================================
 function wireCommon(){
-  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{S.tab=t.dataset.t;render();});
   const lo=document.getElementById('logout'); if(lo) lo.onclick=()=>{
     sessionStorage.clear(); S.player=null;S.pin=null;S.my={};render();};
 }
@@ -559,10 +572,11 @@ function wireAdmin(){
 //  BOOT
 //=============================================================================
 function render(){
-  if(!S.player){ viewLogin(); return; }
+  if(!S.player){ viewLogin(); renderNav(); return; }
   if(S.tab==='leaderboard') viewLeaderboard();
   else if(S.tab==='admin'&&S.isAdmin) viewAdmin();
   else viewFixtures(true);
+  renderNav();
 }
 async function boot(){
   try{ await api.loadAll(); }catch(e){ toast('Load failed: '+(e.message||e),true); }
